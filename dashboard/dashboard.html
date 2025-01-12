@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Snort Alerts</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #007BFF;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f4f4f9;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        #chart-container {
+            width: 80%;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-Time Snort Alerts</h1>
+    <div id="chart-container">
+        <canvas id="alert-chart"></canvas>
+    </div>
+    <table id="alert-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="2">Loading alerts...</td></tr>
+        </tbody>
+    </table>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        async function fetchAlerts() {
+            try {
+                const response = await fetch('fetch_snort_alerts.php');
+                const data = await response.json();
+
+                if (data.alerts) {
+                    updateTable(data.alerts);
+                    updateChart(data.alerts);
+                }
+            } catch (error) {
+                console.error('Error fetching alerts:', error);
+            }
+        }
+
+        function updateTable(alerts) {
+            const tableBody = document.querySelector('#alert-table tbody');
+            tableBody.innerHTML = '';
+            alerts.forEach(alert => {
+                const row = `<tr>
+                    <td>${alert.timestamp}</td>
+                    <td>${alert.details}</td>
+                </tr>`;
+                tableBody.innerHTML += row;
+            });
+        }
+
+        function updateChart(alerts) {
+            const labels = alerts.map(alert => alert.timestamp);
+            const data = alerts.map(() => 1); // Each alert counts as 1 for now
+
+            alertChart.data.labels = labels;
+            alertChart.data.datasets[0].data = data;
+            alertChart.update();
+        }
+
+        // Initialize Chart.js
+        const ctx = document.getElementById('alert-chart').getContext('2d');
+        const alertChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Alerts Over Time',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    tension: 0.2,
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: { title: { display: true, text: 'Timestamp' } },
+                    y: { title: { display: true, text: 'Alert Count' } }
+                }
+            }
+        });
+
+        // Fetch alerts every 2 seconds
+        setInterval(fetchAlerts, 2000);
+        fetchAlerts();
+    </script>
+</body>
+</html>
